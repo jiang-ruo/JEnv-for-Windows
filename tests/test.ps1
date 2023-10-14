@@ -9,9 +9,10 @@ BeforeAll {
     if (!(test-path $PSScriptRoot/backups/)) {
         New-Item -ItemType Directory -Force -Path $PSScriptRoot/backups/ | Out-Null
     }
-    
+
     # Getting the script so it can be run
     $jenv = ((get-item $PSScriptRoot).parent.fullname + "\src\jenv.ps1")
+    $configPath = ((get-item $PSScriptRoot).parent.fullname) + "\config"
     
         
     Write-Host Backing up your path environment vars
@@ -29,12 +30,12 @@ BeforeAll {
     Write-Verbose $env:Path
     
     Write-Host Backing up your JEnv Config
-    if (test-path $Env:APPDATA\JEnv\jenv.config.json) {
-        Copy-Item -Path $Env:APPDATA\JEnv\jenv.config.json -Destination $PSScriptRoot/backups/jenv.config.bak
+    if (test-path $configPath\jenv.config.json) {
+        Copy-Item -Path $configPath\jenv.config.json -Destination $PSScriptRoot/backups/jenv.config.bak
         Write-Verbose "Backed up the following JEnv config:"
         Write-Verbose (Get-Content -Path $PSScriptRoot/backups/jenv.config.bak -Raw)
         Write-Host Deleting old JEnv config
-        Remove-Item -Path $Env:APPDATA\JEnv\jenv.config.json
+        Remove-Item -Path $configPath\jenv.config.json
     }
     else {
         Write-Verbose "No JEnv config was found"
@@ -101,7 +102,7 @@ Describe 'JEnv add command' {
 
     It "Should add a valid java version" {
         & $jenv add fake1 $PSScriptRoot/Fake-Executables/java/v1 | Should -Be 'Successfully added the new JEnv: fake1'
-        $config = Get-Content -Path ($Env:APPDATA + "\JEnv\jenv.config.json") -Raw |  ConvertFrom-Json
+        $config = Get-Content -Path ($configPath + "\jenv.config.json") -Raw |  ConvertFrom-Json
         $template = [PSCustomObject]@{
             name = "fake1"
             path = "$($PSScriptRoot)/Fake-Executables/java/v1"
@@ -111,7 +112,7 @@ Describe 'JEnv add command' {
 
     It "Should add another valid java version" {
         & $jenv add fake2 $PSScriptRoot/Fake-Executables/java/v2 | Should -Be 'Successfully added the new JEnv: fake2'
-        $config = Get-Content -Path ($Env:APPDATA + "\JEnv\jenv.config.json") -Raw |  ConvertFrom-Json
+        $config = Get-Content -Path ($configPath + "\jenv.config.json") -Raw |  ConvertFrom-Json
         $template = @([PSCustomObject]@{
                 name = "fake1"
                 path = "$($PSScriptRoot)/Fake-Executables/java/v1"
@@ -139,7 +140,7 @@ Describe 'JEnv local command' {
 
     It "Should add a valid local" {
         & $jenv local fake1 | Should -Be  @('fake1', 'is now your local java version for', "C:\JEnv-for-Windows\tests")
-        $config = Get-Content -Path ($Env:APPDATA + "\JEnv\jenv.config.json") -Raw |  ConvertFrom-Json
+        $config = Get-Content -Path ($configPath + "\jenv.config.json") -Raw |  ConvertFrom-Json
 
         $template = @([PSCustomObject]@{
                 path = "C:\JEnv-for-Windows\tests"
@@ -151,7 +152,7 @@ Describe 'JEnv local command' {
     It "Should add a valid local with different path and jdk" {
         Set-Location $HOME
         & $jenv local fake2 | Should -Be  @('fake2', 'is now your local java version for', $HOME)
-        $config = Get-Content -Path ($Env:APPDATA + "\JEnv\jenv.config.json") -Raw |  ConvertFrom-Json
+        $config = Get-Content -Path ($configPath + "\jenv.config.json") -Raw |  ConvertFrom-Json
 
         $template = @([PSCustomObject]@{
                 path = "C:\JEnv-for-Windows\tests"
@@ -165,7 +166,7 @@ Describe 'JEnv local command' {
 
     It "Should replace jenv for path if path already in config" {
         & $jenv local fake1 | Should -Be  @('Your replaced your java version for', $HOME, 'with', 'fake1')
-        $config = Get-Content -Path ($Env:APPDATA + "\JEnv\jenv.config.json") -Raw |  ConvertFrom-Json
+        $config = Get-Content -Path ($configPath + "\jenv.config.json") -Raw |  ConvertFrom-Json
 
         $template = @([PSCustomObject]@{
                 path = "C:\JEnv-for-Windows\tests"
@@ -183,7 +184,7 @@ Describe 'JEnv local command' {
 
     It "Should remove jenv from config" {
         & $jenv local remove | Should -Be  "Your local JEnv was unset"
-        $config = Get-Content -Path ($Env:APPDATA + "\JEnv\jenv.config.json") -Raw |  ConvertFrom-Json
+        $config = Get-Content -Path ($configPath + "\jenv.config.json") -Raw |  ConvertFrom-Json
 
         $template = @([PSCustomObject]@{
                 path = "C:\JEnv-for-Windows\tests"
@@ -197,7 +198,7 @@ Describe 'JEnv remove command' {
 
     It "Should remove jenv from jenvs and locals" {
         & $jenv remove fake1 | Should -Be 'Your JEnv was removed successfully'
-        $config = Get-Content -Path ($Env:APPDATA + "\JEnv\jenv.config.json") -Raw |  ConvertFrom-Json
+        $config = Get-Content -Path ($configPath + "\jenv.config.json") -Raw |  ConvertFrom-Json
 
         $template = @()
         $config.locals | ConvertTo-Json | Should -Be ($template | ConvertTo-Json)
@@ -211,7 +212,7 @@ Describe 'JEnv remove command' {
 
     It "Should remove jenv from jenvs" {
         & $jenv remove fake2 | Should -Be 'Your JEnv was removed successfully'
-        $config = Get-Content -Path ($Env:APPDATA + "\JEnv\jenv.config.json") -Raw |  ConvertFrom-Json
+        $config = Get-Content -Path ($configPath + "\jenv.config.json") -Raw |  ConvertFrom-Json
 
         $template = @()
         $config.jenvs | ConvertTo-Json | Should -Be ($template | ConvertTo-Json)
@@ -247,9 +248,9 @@ AfterAll {
     
     Write-Host Restoring your JEnv config
     if (test-path $PSScriptRoot/backups/jenv.config.bak) {
-        Copy-Item -Path $PSScriptRoot/backups/jenv.config.bak -Destination $Env:APPDATA\JEnv\jenv.config.json
+        Copy-Item -Path $PSScriptRoot/backups/jenv.config.bak -Destination $configPath\jenv.config.json
         Write-Verbose "Restored the following JEnv config:"
-        Write-Verbose (Get-Content -Path  $Env:APPDATA\JEnv\jenv.config.json -Raw)
+        Write-Verbose (Get-Content -Path  $configPath\jenv.config.json -Raw)
     }
     else {
         Write-Verbose "No JEnv config backup was found"

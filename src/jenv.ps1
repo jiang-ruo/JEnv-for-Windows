@@ -136,15 +136,20 @@ if ($output) {
 
 #region Load the config
 # Create folder if neccessary. Pipe to null to avoid created message
-if (!(test-path $Env:APPDATA\JEnv\)) {
-    New-Item -ItemType Directory -Force -Path $Env:APPDATA\JEnv\ | Out-Null
+#$jenvPaths = (Get-Command jenv -All).source
+#$jenvDir = Split-Path -Parent $jenvPaths
+
+$configPath = "${root}\config"
+Write-Host $configPath
+if (!(test-path $configPath)) {
+    New-Item -ItemType Directory -Force -Path $configPath | Out-Null
 }
 # Creates the config file if neccessary
-if (!(test-path $Env:APPDATA\JEnv\jenv.config.json)) {
-    New-Item -type "file" -path $Env:APPDATA\JEnv\ -name jenv.config.json | Out-Null
+if (!(test-path $configPath\jenv.config.json)) {
+    New-Item -type "file" -path $configPath -name jenv.config.json | Out-Null
 }
 # Load the config
-$config = Get-Content -Path ($Env:APPDATA + "\JEnv\jenv.config.json") -Raw |  ConvertFrom-Json
+$config = Get-Content -Path ($configPath + "\jenv.config.json") -Raw |  ConvertFrom-Json
 # Initialize with empty object if config file is empty so Add-Member works
 if ($null -eq $config) {
     $config = New-Object -TypeName psobject
@@ -207,6 +212,6 @@ else {
     }
 
     #region Save the config
-    ConvertTo-Json $config | Out-File $Env:APPDATA\JEnv\jenv.config.json
+    ConvertTo-Json $config | Out-File $configPath\jenv.config.json
     #endregion
 }
